@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palm Cafe</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="corner top-left"><img src="6.png" alt="Dish 1"></div>
+        <div class="corner top-right"><img src="7.png" alt="Drink 1"></div>
+        <div class="corner bottom-left"><img src="8.png" alt="Interior 1"></div>
+        <div class="corner bottom-right"><img src="9.png" alt="Dessert 1"></div>
+        <div class="content">
+            <!-- Creating a canvas element in HTML-->
+            <canvas id="canv" width="600" height="170" style="width: 100%;"></canvas>
+
+            <script>
+
+                /*The window.onload function will run as 
+                soon as the window loads in the browser */
+                window.onload = function () {
+
+                    /* This method returns the html element that
+                        has the ID attribute with the specified
+                        value. */
+                    let canvas = document.getElementById("canv");
+
+                    /* This method returns a drawing context
+                        on the canvas, or null if the context
+                        identified is not supported. */
+                    let context = canvas.getContext("2d");
+
+                    /* It will change the style and appearance 
+                        of the text to make it look more geeky. */
+                    context.font = "70px Bungee";
+                    context.fillStyle = "#C6B5AB";
+                    context.textAlign = "center";
+
+                    let string = "Palm Cafe";
+
+                    let angle = Math.PI * 0.45; // in radians
+                    let radius = 350;
+
+
+                    context.translate(300, 400);
+                    context.rotate(-1.1 * angle / 2);
+
+                    for (let i = 0; i < string.length; i++) {
+
+                        /* It is worth noting that we are not
+                            rotating the text,here the whole
+                            context is being rotated and
+                            translated, and the letters are just
+                            filled in it. */
+                        context.rotate(angle / string.length);
+                        context.save();
+                        context.translate(0, -1 * radius);
+                        context.fillText(string[i], 0, 0);
+                        context.restore();
+                    }
+                };
+            </script>
+            <div><img src="10.svg" alt="description of the image"><p><strong>PALM Cafe (Snacks and Drinks)</strong></p></div>
+            <div><img src="11.svg" alt="description of the image"><p><strong>65.000-90.000đ</strong>/người</p></div>
+            <div><img src="12.svg" alt="description of the image"><p>07:00 AM - 11:59 PM</p></div>
+            <div><img src="13.svg" alt="description of the image"><p>35 P. Quang Trung, Trần Hưng Đạo, Hoàn Kiếm, Hà Nội, Việt Nam</p></div>
+        </div>
+    </div>
+</body>
+</html>
