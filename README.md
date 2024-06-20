@@ -2,6 +2,8 @@
 
 The Automate TikTok Account Project is an innovative effort to review coffee shops for TikTok viewers using advanced technologies. This project utilizes Selenium for data crawling, Computer Vision for image classification, and Large Language Models for content generation from Google Maps data.
 
+This project is the work of me, QuangNguyen and KienTran dedicated time so we hope that you can enjoy the work, if you feel it fascinating!
+
 ## Features
 
 - **Data Crawling:** Utilizes Selenium to gather information from various coffee shop locations.
