@@ -13,10 +13,17 @@ def image_to_matrix(image_path):
 
 def remove_duplicate_images(folder_path):
     unique_images = {}
+    files_to_remove = []
+    
     for filename in os.listdir(folder_path):
         image_path = os.path.join(folder_path, filename)
         if os.path.isfile(image_path):
-            img_matrix = image_to_matrix(image_path)
+            try:
+                img_matrix = image_to_matrix(image_path)
+            except Exception as e:
+                print(f"Could not process file {filename}: {e}")
+                continue
+            
             is_duplicate = False
             for stored_matrix in unique_images.values():
                 if img_matrix.shape == stored_matrix.shape and np.array_equal(img_matrix, stored_matrix):
@@ -24,16 +31,18 @@ def remove_duplicate_images(folder_path):
                     break
             if not is_duplicate:
                 unique_images[filename] = img_matrix
+            else:
+                files_to_remove.append(image_path)
 
     # Remove duplicates
-    for filename in os.listdir(folder_path):
-        if filename not in unique_images:
-            os.remove(os.path.join(folder_path, filename))
+    for file_path in files_to_remove:
+        os.remove(file_path)
+        print(f"Removed duplicate image: {file_path}")
 
     return list(unique_images.keys())
 
 # Folder path
-folder_path = 'kien_fake_images'
+folder_path = 'kien_real_images'
 
 # Remove duplicate images and get the list of unique images
 unique_images = remove_duplicate_images(folder_path)
