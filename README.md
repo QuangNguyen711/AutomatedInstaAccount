@@ -4,6 +4,17 @@ The Automate TikTok Account Project is an innovative effort to review coffee sho
 
 This project is the work of me, QuangNguyen and KienTran dedicated time so we hope that you can enjoy the work, if you feel it fascinating!
 
+## Pipeline
+![TiktokAccountPipeline](https://github.com/QuangNguyen2910/AutomateTiktokAccount/assets/127973111/47c56d04-beb6-450d-83fc-421372bc44c1)
+### Pipeline details
+#### Get feedback images from a coffee shop
+![1](https://github.com/QuangNguyen2910/AutomateTiktokAccount/assets/127973111/546ea672-74a2-4f61-b2ea-b3c8708392a8)
+#### Choose and Crop images
+![2](https://github.com/QuangNguyen2910/AutomateTiktokAccount/assets/127973111/b1b244fe-f1e5-4c02-94aa-3b0d35a3cf37)
+#### Output
+![output](https://github.com/QuangNguyen2910/AutomateTiktokAccount/assets/127973111/e3716216-04c4-4346-b631-f0085e4e859b)
+
+
 ## Features
 
 - **Data Crawling:** Utilizes Selenium to gather information from various coffee shop locations.
