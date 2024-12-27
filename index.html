@@ -1,0 +1,144 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palm Cafe</title>
+    <!-- <link rel="stylesheet" href="styles.css"> -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Bungee;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .corner {
+            position: relative;
+        }
+
+        .corner img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #2E1F11;
+            color: #C6B5AB;
+            border-radius: 30px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            text-align: left;
+            width: 250px;
+        }
+
+        .content img {
+            width: 10%;
+            height: 10%;
+        }
+
+        .content h1 {
+            margin: 0;
+            font-size: 1.7em;
+            text-align: center;
+            font-family: "Bungee";
+        }
+
+        .content div {
+            display: flex;
+            flex-direction: row;
+            margin-bottom: 2px;
+        }
+
+        .content div p {
+            margin: 5px 20px 0;
+            font-size: 0.8em;
+            font-family: "Public Sans";
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="corner top-left"><img src="Croped_Images/0.jpg" alt="Dish 1"></div>
+        <div class="corner top-right"><img src="Croped_Images/1.jpg" alt="Drink 1"></div>
+        <div class="corner bottom-left"><img src="Croped_Images/2.jpg" alt="Interior 1"></div>
+        <div class="corner bottom-right"><img src="Croped_Images/3.jpg" alt="Dessert 1"></div>
+        <div class="content">
+            <!-- Creating a canvas element in HTML-->
+            <canvas id="canv" width="600" height="170" style="width: 100%; font-family: Bungee;"></canvas>
+
+            <script>
+
+                /*The window.onload function will run as
+                soon as the window loads in the browser */
+                window.onload = function () {
+
+                    /* This method returns the html element that
+                        has the ID attribute with the specified
+                        value. */
+                    let canvas = document.getElementById("canv");
+
+                    /* This method returns a drawing context
+                        on the canvas, or null if the context
+                        identified is not supported. */
+                    let context = canvas.getContext("2d");
+
+                    /* It will change the style and appearance
+                        of the text to make it look more geeky. */
+                    context.font = "70px Bungee";
+                    context.fillStyle = "#C6B5AB";
+                    context.textAlign = "center";
+
+                    let string = 'GAD8 Coffee';
+
+                    let angle = Math.PI * 0.45; // in radians
+                    let radius = 350;
+
+
+                    context.translate(300, 400);
+                    context.rotate(-1.1 * angle / 2);
+
+                    for (let i = 0; i < string.length; i++) {
+
+                        /* It is worth noting that we are not
+                            rotating the text,here the whole
+                            context is being rotated and
+                            translated, and the letters are just
+                            filled in it. */
+                        context.rotate(angle / string.length);
+                        context.save();
+                        context.translate(0, -1 * radius);
+                        context.fillText(string[i], 0, 0);
+                        context.restore();
+                    }
+                };
+            </script>
+            <div><img src="content_generator/10.svg" alt="description of the image"><p><strong>GAD8 COFFEE & STUDIO</strong></p></div>
+            <div><img src="content_generator/11.svg" alt="description of the image"><p><strong>1-100.000 ₫</strong>/người</p></div>
+            <div><img src="content_generator/12.svg" alt="description of the image"><p>08:00–19:00</p></div>
+            <div><img src="content_generator/13.svg" alt="description of the image"><p>50 P. Đào Duy Từ, Hàng Buồm, Hoàn Kiếm, Hà Nội</p></div>
+        </div>
+    </div>
+</body>
+</html>
