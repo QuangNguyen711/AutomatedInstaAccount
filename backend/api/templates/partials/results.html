@@ -1,0 +1,11 @@
+{% if not results %}
+<p class="font-public-sans text-sm" style="color:#a8927e;">Không tìm thấy quán nào phù hợp.</p>
+{% else %}
+<div class="carousel flex overflow-x-auto snap-x snap-mandatory">
+    {% for r in results %}
+    <div class="w-full shrink-0 snap-center flex justify-center px-6 py-1">
+        {% include "partials/place_card.html" %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

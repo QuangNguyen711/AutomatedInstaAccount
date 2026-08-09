@@ -1,64 +1,106 @@
-# Automate TikTok Account Project
+# PlacesFinder
 
-The Automate TikTok Account Project is an innovative effort to review coffee shops for Insta/Threads viewers using advanced technologies. This project utilizes Selenium for data crawling, Computer Vision for image classification, and Large Language Models for content generation from Google Maps data.
+A personal search engine for finding cafes/restaurants near you that match a specific
+free-text request (a dish, an atmosphere, an amenity...). Google Maps is scraped on-demand
+with Playwright/Patchright (no paid Places API), cached per-place in Postgres, and each
+result is scored + given a short summary by an LLM reading its real reviews — weighted
+toward recent ones — against your exact request.
 
-This project is the work of me, QuangNguyen and KienTran dedicated time so we hope that you can enjoy the work, if you feel it fascinating!
+This project supersedes the original TikTok/Instagram coffee-shop-review pipeline, which
+is archived under [`legacy/`](legacy/) (old Selenium crawlers, the YOLO training data, and
+the `best_cls.pt` photo-quality classifier — the classifier is reused live, see
+`backend/infrastructure/vision/`).
 
-## Pipeline
-![TiktokAccountPipeline](https://github.com/QuangNguyen2910/AutomateTiktokAccount/assets/127973111/47c56d04-beb6-450d-83fc-421372bc44c1)
-### Pipeline details
-#### Get feedback images from a coffee shop
-![1](https://github.com/QuangNguyen2910/AutomateTiktokAccount/assets/127973111/546ea672-74a2-4f61-b2ea-b3c8708392a8)
-#### Choose and Crop images
-![2](https://github.com/QuangNguyen2910/AutomateTiktokAccount/assets/127973111/b1b244fe-f1e5-4c02-94aa-3b0d35a3cf37)
-#### Output
-![output](https://github.com/QuangNguyen2910/AutomateTiktokAccount/assets/127973111/e3716216-04c4-4346-b631-f0085e4e859b)
+## How a search works
 
+1. **Query rewrite** (`QueryRewriteService`) — your free-text request gets simplified into a
+   short term Google Maps' own search box can actually match on (place category/name only;
+   Maps can't search on "must have dark chocolate cake"). This simplified term is what's
+   actually sent to Maps.
+2. **Listing search** (`PlacesProvider.search_listings`) — always runs fresh, so results
+   genuinely reflect the current query.
+3. **Per-place detail cache** (`PlaceRepository.find_by_id`) — for each listing, a place's own
+   photos/reviews are reused if already crawled within `CACHE_TTL_DAYS`, regardless of which
+   search found it; otherwise `PlacesProvider.fetch_details` scrapes it fresh (photos including
+   ones attached to reviews, filtered for blur, plus reviews with rating/recency).
+4. **Ranking** (`RankingService` + `SummaryService`) — your *full, original* request (not the
+   simplified Maps term) is matched against each place's real reviews by an LLM, producing a
+   0-10 relevance score and a one-sentence grounded summary. Final rank = weighted relevance +
+   distance (`RANKING_WEIGHT_RELEVANCE` / `RANKING_WEIGHT_DISTANCE`).
+5. **Completeness filter** — a result needs both a summary and at least 4 good photos to be
+   shown; anything short of that gets its stale cache entry dropped so it's re-crawled next time
+   instead of surfacing a half-empty card.
 
-## Features
+## Architecture
 
-- **Data Crawling:** Utilizes Selenium to gather information from various coffee shop locations.
-- **Image Classification:** Uses Computer Vision to classify images related to coffee shops.
-- **Content Generation:** Applies Large Language Models to extract and create engaging content based on the gathered data.
-- **Visual Content Creation:** Combines HTML, CSS, JavaScript, and IMGKit to generate visually appealing images for TikTok posts.
+Clean Architecture, mirroring the layer split used in the sibling SlideGen project:
 
-## Installation
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/QuangNguyen2910/AutomateTiktokAccount.git
-   cd AutomateTiktokAccount
-   ```
-
-2. Install dependencies:
-   ```bash
-   # Assuming you have Python and pip installed
-   pip install -r requirements.txt
-   ```
-
-## Usage
-
-1. Run the main script to start the automated process:
-   ```bash
-   python main.py
-   ```
-
-2. Follow the prompts to initiate data crawling, image classification, content generation, and TikTok uploads.
-
-## Contributing
-
-Contributions are welcome! If you want to contribute to this project, feel free to fork the repository and submit a pull request.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```
+backend/
+├── api/              # FastAPI routes, Jinja2 templates, static assets (presentation layer)
+├── application/      # Services orchestrating use cases (search, ranking, query rewrite)
+├── domain/            # Entities + Ports (interfaces) — pure Python, no third-party deps
+└── infrastructure/    # Concrete implementations: Playwright scraper, Postgres repo, YOLO
+                        # classifier, NVIDIA-hosted LLM, Nominatim geocoding
 ```
 
-### Explanation:
+Swapping the data source later (e.g. to the Google Places API once this goes public) means
+adding one new `infrastructure/places/` implementation of the `PlacesProvider` port — nothing
+in `application/`, `domain/`, or `api/` needs to change.
 
-- **Project Title and Description:** Clearly states the project name and provides a brief overview of what the project does.
-- **Features:** Highlights key features or functionalities of the project.
-- **Installation:** Provides instructions on how to clone the repository and install dependencies.
-- **Usage:** Explains how to use the project, including running the main script.
-- **Contributing:** Encourages others to contribute to the project and explains how they can do so.
-- **License:** Specifies the project's licensing information.
+## Requirements
+
+- [uv](https://docs.astral.sh/uv/) for Python env/deps
+- Docker Desktop, for building/running the app + Postgres locally
+- A Google account signed in once via `scripts/google_login_setup.py` (see below) — without
+  it, Maps serves a stripped "limited view" with no reviews to logged-out/automated sessions
+- An NVIDIA API key (free tier) for the LLM ranking/summary/query-rewrite calls — without one,
+  results still work but fall back to distance-only ranking with no summaries
+
+## One-time setup: Google login
+
+```bash
+uv sync
+uv run python scripts/google_login_setup.py
+```
+
+Opens a real (headed) browser for an interactive login, then saves the session to
+`.secrets/google_auth_state.json` (gitignored). The account's **language must be set to
+English** in its Google Account settings — the scraper matches Maps UI elements by English
+text, and Maps follows the account's language once signed in, not the browser locale.
+Re-run this whenever the session gets invalidated (Google occasionally forces this).
+
+## Running locally
+
+```bash
+cp .env.example .env        # fill in LLM_API_KEY at minimum
+docker compose up --build   # builds the app image (Chromium for Patchright + Xvfb) and starts Postgres+pgvector
+uv run alembic upgrade head # first run only
+```
+
+Then open http://localhost:8000 — allow location access (or enter an address/Plus
+Code/coordinates manually — useful on mobile, since browsers block geolocation on
+non-HTTPS origins) and search.
+
+### Running the API without Docker (Postgres still via Docker)
+
+```bash
+docker compose up -d db     # Postgres only
+uv sync                     # install deps + create .venv
+uv run alembic upgrade head
+uv run uvicorn backend.api.app:app --host 0.0.0.0 --port 8000
+```
+
+Note: the scraper runs Chromium **headed** (Google Maps' review tab bar doesn't render in
+headless mode) — on Windows/macOS this just opens a visible browser window; the Docker image
+runs it under Xvfb instead.
+
+## Current scope
+
+- ✅ On-demand Google Maps scraping (listing + review/photo detail pages), per-place Postgres
+  cache with TTL, YOLO + blur-filter photo quality filtering.
+- ✅ LLM-based ranking: query-aware relevance score + grounded summary per place, distance
+  blended in, incomplete results filtered out and re-crawled.
+- ✅ Manual address/Plus Code/coordinate entry as a geolocation fallback.
+- ⏳ Swapping the scraper for the official Google Places API once this is opened up beyond
+  personal use.

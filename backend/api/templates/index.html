@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+<main class="min-h-screen" style="background-color:#2E1F11;"
+      x-data="{
+          lat: null, lng: null, address: '', locating: true, denied: false,
+          searching: false, error: null,
+          init() {
+              if (!navigator.geolocation) { this.locating = false; this.denied = true; return; }
+              // Some browsers (notably Safari on a non-HTTPS origin) never call either callback
+              // at all instead of erroring out, which would leave the button disabled forever —
+              // force a resolution after 6s so the manual address fallback stays reachable.
+              const timeout = setTimeout(() => { this.locating = false; this.denied = true; }, 6000);
+              navigator.geolocation.getCurrentPosition(
+                  pos => { clearTimeout(timeout); this.lat = pos.coords.latitude; this.lng = pos.coords.longitude; this.locating = false; },
+                  () => { clearTimeout(timeout); this.locating = false; this.denied = true; }
+              );
+          },
+          async onSubmit() {
+              this.error = null;
+              if (this.lat === null || this.lng === null) {
+                  const addr = this.address.trim();
+                  if (!addr) {
+                      this.error = 'Cần vị trí hoặc nhập địa chỉ để tìm.';
+                      return;
+                  }
+                  // Toạ độ dán trực tiếp từ Google Maps (vd. 21.028511, 105.804817) — dùng
+                  // luôn, khỏi qua Nominatim, vừa chính xác hơn vừa không phụ thuộc mạng ngoài.
+                  const coordMatch = addr.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+                  if (coordMatch) {
+                      this.lat = parseFloat(coordMatch[1]);
+                      this.lng = parseFloat(coordMatch[2]);
+                  } else {
+                      try {
+                          const res = await fetch('/api/geocode?address=' + encodeURIComponent(addr));
+                          if (!res.ok) { this.error = 'Không tìm thấy địa chỉ này.'; return; }
+                          const data = await res.json();
+                          this.lat = data.lat; this.lng = data.lng;
+                      } catch (e) {
+                          this.error = 'Không tra được địa chỉ, thử lại sau.';
+                          return;
+                      }
+                  }
+              }
+              this.searching = true;
+              try {
+                  const form = new FormData(this.$refs.form);
+                  form.set('lat', this.lat); form.set('lng', this.lng);
+                  const res = await fetch('/api/search', { method: 'POST', body: form });
+                  if (!res.ok) {
+                      this.error = 'Máy chủ báo lỗi (mã ' + res.status + '), thử lại sau.';
+                      return;
+                  }
+                  document.getElementById('results').innerHTML = await res.text();
+              } catch (e) {
+                  // Tìm kiếm hiện mất khoảng 1-2 phút (crawl trực tiếp Google Maps) — nếu khoá
+                  // màn hình hoặc chuyển app trong lúc chờ, Safari/Chrome trên điện thoại có thể
+                  // treo/huỷ request đang chạy giữa chừng, gây lỗi network kiểu này.
+                  console.error('search failed:', e);
+                  this.error = 'Tìm kiếm thất bại (' + (e.name || 'lỗi mạng') + ') — có thể do '
+                      + 'khoá màn hình/chuyển app lúc đang tìm (mất khoảng 1-2 phút). Thử lại và '
+                      + 'giữ màn hình sáng nhé.';
+              } finally {
+                  this.searching = false;
+              }
+          },
+      }">
+    <div class="max-w-md mx-auto px-6 pt-16 pb-8 text-center">
+        <h1 class="font-bungee text-4xl mb-2" style="color:#C6B5AB;">PlacesFinder</h1>
+        <p class="font-public-sans text-sm mb-8" style="color:#a8927e;">
+            Tìm quán ăn, quán cà phê đúng ý bạn, gần ngay đây
+        </p>
+
+        <template x-if="denied">
+            <p class="font-public-sans text-xs mb-4" style="color:#e0a56e;">
+                Trình duyệt không lấy được vị trí tự động (thường do đang truy cập qua HTTP, không
+                phải HTTPS) — nhập địa chỉ, mã Plus Code (vd. 3W23+962 Việt Hưng, Hà Nội), hoặc
+                toạ độ copy từ Google Maps vào ô bên dưới.
+            </p>
+        </template>
+        <template x-if="error">
+            <p class="font-public-sans text-xs mb-4" style="color:#e0a56e;" x-text="error"></p>
+        </template>
+
+        <form x-ref="form" @submit.prevent="onSubmit()" class="space-y-3 text-left">
+            <input
+                type="text"
+                name="query_text"
+                placeholder="vd. quán cafe yên tĩnh có trà sữa trân châu"
+                class="search-field w-full rounded-xl px-4 py-3 font-public-sans text-sm border-0"
+                style="background-color:#3d2c1a; color:#C6B5AB;"
+            >
+
+            <input
+                type="text"
+                x-model="address"
+                placeholder="Địa chỉ, mã Plus Code, hoặc toạ độ từ Google Maps"
+                class="search-field w-full rounded-xl px-4 py-3 font-public-sans text-sm border-0"
+                style="background-color:#3d2c1a; color:#C6B5AB;"
+            >
+
+            <select
+                name="radius_m"
+                class="search-field w-full rounded-xl px-4 py-3 font-public-sans text-sm border-0"
+                style="background-color:#3d2c1a; color:#C6B5AB;"
+            >
+                <option value="1000">Trong vòng 1 km</option>
+                <option value="3000" selected>Trong vòng 3 km</option>
+                <option value="5000">Trong vòng 5 km</option>
+            </select>
+
+            <button
+                type="submit"
+                :disabled="locating || searching"
+                class="w-full rounded-xl py-3 font-bungee text-sm tracking-wide disabled:opacity-40 transition"
+                style="background-color:#C6B5AB; color:#2E1F11;"
+            >
+                <span x-show="locating">ĐANG LẤY VỊ TRÍ...</span>
+                <span x-show="!locating && searching">ĐANG TÌM...</span>
+                <span x-show="!locating && !searching">TÌM QUÁN</span>
+            </button>
+        </form>
+
+        <div x-show="searching" class="font-public-sans text-sm mt-4" style="color:#a8927e;">
+            Đang tìm (có thể mất một lúc)...
+        </div>
+    </div>
+
+    <div id="results" class="px-4 pb-12"></div>
+</main>
+{% endblock %}

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}PlacesFinder{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/vendor/htmx.min.js"></script>
+    <script src="/static/vendor/alpine.min.js" defer></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&family=Bungee&display=swap" rel="stylesheet">
+    <style>
+        .htmx-indicator{display:none} .htmx-request .htmx-indicator{display:block} .htmx-request.htmx-indicator{display:block}
+        .font-bungee { font-family: "Bungee", sans-serif; }
+        .font-public-sans { font-family: "Public Sans", sans-serif; }
+        .search-field { outline: 2px solid transparent; transition: outline-color 0.15s; }
+        .search-field:focus { outline-color: #C6B5AB; }
+        .search-field::placeholder { color: #8a7563; }
+    </style>
+</head>
+<body class="min-h-screen">
+    {% block content %}{% endblock %}
+</body>
+</html>

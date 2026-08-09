@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - ./.secrets:/app/.secrets:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: placesfinder
+      POSTGRES_PASSWORD: placesfinder
+      POSTGRES_DB: placesfinder
+    ports:
+      - "5432:5432"  # exposed on localhost so `uv run alembic ...` / a local uvicorn can reach it too
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U placesfinder"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:
