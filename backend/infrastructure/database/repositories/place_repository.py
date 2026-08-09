@@ -33,7 +33,16 @@ class SqlAlchemyPlaceRepository(PlaceRepository):
     async def upsert(self, places: list[Place]) -> None:
         async with self._session_factory() as session:
             for place in places:
-                existing = await session.get(PlaceModel, place.place_id)
+                # Must eager-load photos/reviews here: reassigning those relationships below
+                # needs their *current* contents first (to orphan/delete the old rows), and an
+                # AsyncSession can't do that via an implicit lazy-load outside an awaited call
+                # (raises MissingGreenlet) — only matters when `place` already has a row (a
+                # re-crawl past its TTL), which a brand-new insert never triggers.
+                existing = await session.get(
+                    PlaceModel,
+                    place.place_id,
+                    options=[selectinload(PlaceModel.photos), selectinload(PlaceModel.reviews)],
+                )
                 if existing is None:
                     existing = PlaceModel(place_id=place.place_id)
                     session.add(existing)
