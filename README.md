@@ -31,6 +31,7 @@ good matcha"*. PlacesFinder bridges that gap:
 | 📸 **Only good photos** | A YOLO classifier + blur filter keeps the blurry/irrelevant shots out of the card |
 | ⚡ **Results stream in** | Cards appear one by one over SSE as each place finishes — no staring at a spinner for the whole batch |
 | 🕒 **Knows when to go** | Opening hours + today's *Popular times* curve → "Đang mở · 7h–22h", "Đông nhất 15–17h · hiện giờ khá vắng" — and the LLM uses them too |
+| 🌐 **Tiếng Việt / English** | A VI/EN toggle switches the whole UI *and* the LLM prompts, so summaries come back in the chosen language |
 | 💾 **Cached per place** | Photos/reviews live in Postgres for `CACHE_TTL_DAYS`, reused across any search that finds that place |
 
 > 🗂️ This project supersedes the original TikTok/Instagram coffee-shop-review pipeline, archived under
@@ -179,6 +180,7 @@ See [`.env.example`](.env.example) for the full list.
 - [x] Streaming results (SSE), parallel detail scraping, automatic re-crawl of incomplete places
 - [x] Opening hours + popular times, shown on cards and fed to the LLM
 - [x] Manual address / Plus Code / coordinate entry (Photon geocoding)
+- [x] Vietnamese / English UI + LLM output
 - [ ] Swap the scraper for the official Google Places API once this goes beyond personal use
 
 <div align="center">

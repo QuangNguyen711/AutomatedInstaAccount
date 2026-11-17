@@ -1,5 +1,5 @@
 {% if not results %}
-<p class="font-public-sans text-sm" style="color:#a8927e;">Không tìm thấy quán nào phù hợp.</p>
+<p class="font-public-sans text-sm" style="color:#a8927e;">{{ t.no_results }}</p>
 {% else %}
 <div class="carousel flex overflow-x-auto snap-x snap-mandatory">
     {% for r in results %}

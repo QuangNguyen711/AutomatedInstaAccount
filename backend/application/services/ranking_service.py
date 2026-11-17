@@ -74,7 +74,7 @@ class RankingService:
         try:
             async with self._semaphore:
                 summary, score = await self._summary_service.generate_query_match(
-                    place, query.query_text, distance_m
+                    place, query.query_text, distance_m, query.lang
                 )
         except Exception:
             # One place's LLM call failing (rate limit, timeout, transient 503) shouldn't

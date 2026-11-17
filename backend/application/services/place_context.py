@@ -5,6 +5,7 @@ match prompt so the model can honour "quán gần", "còn mở", "tránh giờ �
 card (hours_line / busy_line). Kept free of I/O so both paths share one source of truth.
 
 All "now" reasoning is in Vietnam local time (the app is Hanoi-only) regardless of server TZ.
+Every helper takes a `lang` ("vi" / "en") so card lines and prompt context match the UI language.
 """
 from __future__ import annotations
 
@@ -12,19 +13,55 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from backend.domain.entities.place import Place
+from backend.domain.entities.search_query import DEFAULT_LANG, normalize_lang
 
 _VN_TZ = timezone(timedelta(hours=7))
 _WEEKDAYS_EN = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
 _TIME_TOKEN_RE = re.compile(r"(\d{1,2})(?::(\d{2}))?\s*([AP]M)", re.I)
+
+_TEXT = {
+    "vi": {
+        "all_day": "Mở cả ngày (24h)",
+        "closed_today": "Hôm nay đóng cửa",
+        "open_now": "Đang mở · {span}",
+        "closed_now": "Đã đóng · mở {open}",
+        "peak": "Đông nhất {span}",
+        "peak_now": "Đông nhất {span} · hiện giờ {level}",
+        "busy_levels": ("rất vắng", "khá vắng", "vừa phải", "khá đông", "rất đông"),
+        "ctx_header": "Thông tin thêm về quán:",
+        "ctx_distance": "- Cách khách khoảng {km:.1f} km.",
+        "ctx_hours": "- Giờ mở cửa hôm nay: {hours}.",
+        "ctx_busy": "- Mức độ đông khách: {busy}.",
+    },
+    "en": {
+        "all_day": "Open 24 hours",
+        "closed_today": "Closed today",
+        "open_now": "Open now · {span}",
+        "closed_now": "Closed · opens {open}",
+        "peak": "Busiest {span}",
+        "peak_now": "Busiest {span} · {level} right now",
+        "busy_levels": ("very quiet", "fairly quiet", "moderate", "fairly busy", "very busy"),
+        "ctx_header": "Extra info about the place:",
+        "ctx_distance": "- About {km:.1f} km from the customer.",
+        "ctx_hours": "- Opening hours today: {hours}.",
+        "ctx_busy": "- How busy it gets: {busy}.",
+    },
+}
+
+
+def _t(lang: str) -> dict:
+    return _TEXT[normalize_lang(lang)]
 
 
 def _now_vn() -> datetime:
     return datetime.now(_VN_TZ)
 
 
-def _fmt_hour(hour: float) -> str:
+def _fmt_hour(hour: float, lang: str = DEFAULT_LANG) -> str:
     h = int(hour)
     minutes = round((hour - h) * 60)
+    if normalize_lang(lang) == "en":
+        return f"{h}:{minutes:02d}"
     return f"{h}h{minutes:02d}" if minutes else f"{h}h"
 
 
@@ -52,16 +89,18 @@ def _open_window(hours_text: str) -> tuple[float, float] | None:
     return _token_to_hour(tokens[0]), _token_to_hour(tokens[-1])
 
 
-def hours_line(place: Place) -> str | None:
-    """Card line: 'Đang mở · 7h–22h' / 'Đã đóng · mở 7h' / 'Mở cả ngày' / 'Hôm nay đóng cửa'."""
+def hours_line(place: Place, lang: str = DEFAULT_LANG) -> str | None:
+    """Card line: 'Đang mở · 7h–22h' / 'Đã đóng · mở 7h' / 'Mở cả ngày' / 'Hôm nay đóng cửa'
+    (or the English equivalents)."""
+    t = _t(lang)
     text = _today_hours_text(place)
     if not text:
         return None
     low = text.lower()
     if "24" in low and "hour" in low:
-        return "Mở cả ngày (24h)"
+        return t["all_day"]
     if "closed" in low:
-        return "Hôm nay đóng cửa"
+        return t["closed_today"]
 
     window = _open_window(text)
     if window is None:
@@ -70,20 +109,18 @@ def hours_line(place: Place) -> str | None:
     now_h = _now_vn().hour + _now_vn().minute / 60.0
     # Close after midnight (e.g. 6 PM to 1 AM) reads as close_h < open_h.
     is_open = open_h <= now_h < close_h if close_h > open_h else (now_h >= open_h or now_h < close_h)
-    span = f"{_fmt_hour(open_h)}–{_fmt_hour(close_h)}"
-    return f"Đang mở · {span}" if is_open else f"Đã đóng · mở {_fmt_hour(open_h)}"
+    span = f"{_fmt_hour(open_h, lang)}–{_fmt_hour(close_h, lang)}"
+    if is_open:
+        return t["open_now"].format(span=span)
+    return t["closed_now"].format(open=_fmt_hour(open_h, lang))
 
 
-def _busy_word(pct: int) -> str:
-    if pct < 20:
-        return "rất vắng"
-    if pct < 40:
-        return "khá vắng"
-    if pct < 60:
-        return "vừa phải"
-    if pct < 80:
-        return "khá đông"
-    return "rất đông"
+def _busy_word(pct: int, lang: str = DEFAULT_LANG) -> str:
+    levels = _t(lang)["busy_levels"]
+    for i, upper in enumerate((20, 40, 60, 80)):
+        if pct < upper:
+            return levels[i]
+    return levels[-1]
 
 
 def _peak_range(curve: dict[int, int]) -> tuple[int, int] | None:
@@ -103,35 +140,40 @@ def _curve(place: Place) -> dict[int, int]:
     return {int(h): int(pct) for h, pct in place.popular_times.items()}
 
 
-def busy_line(place: Place) -> str | None:
-    """Card line: 'Đông nhất 15–17h · hiện giờ khá vắng'."""
+def busy_line(place: Place, lang: str = DEFAULT_LANG) -> str | None:
+    """Card line: 'Đông nhất 15–17h · hiện giờ khá vắng' / 'Busiest 15:00–17:00 · fairly quiet right now'."""
+    t = _t(lang)
     curve = _curve(place)
     peak = _peak_range(curve)
     if peak is None:
         return None
     low, high = peak
-    span = f"{low}h" if low == high else f"{low}–{high}h"
+    if normalize_lang(lang) == "en":
+        span = _fmt_hour(low, lang) if low == high else f"{_fmt_hour(low, lang)}–{_fmt_hour(high, lang)}"
+    else:
+        span = f"{low}h" if low == high else f"{low}–{high}h"
     now_pct = curve.get(_now_vn().hour)
     if now_pct is None:
-        return f"Đông nhất {span}"
-    return f"Đông nhất {span} · hiện giờ {_busy_word(now_pct)}"
+        return t["peak"].format(span=span)
+    return t["peak_now"].format(span=span, level=_busy_word(now_pct, lang))
 
 
-def prompt_context(place: Place, distance_m: float | None) -> str:
+def prompt_context(place: Place, distance_m: float | None, lang: str = DEFAULT_LANG) -> str:
     """Extra factual lines appended to the LLM match prompt so it can reason about proximity,
     whether the place is open right now, and how busy it tends to be. Only includes what's known."""
+    t = _t(lang)
     lines: list[str] = []
     if distance_m is not None:
-        lines.append(f"- Cách khách khoảng {distance_m / 1000:.1f} km.")
+        lines.append(t["ctx_distance"].format(km=distance_m / 1000))
 
-    hours = hours_line(place)
+    hours = hours_line(place, lang)
     if hours:
-        lines.append(f"- Giờ mở cửa hôm nay: {hours}.")
+        lines.append(t["ctx_hours"].format(hours=hours))
 
-    busy = busy_line(place)
+    busy = busy_line(place, lang)
     if busy:
-        lines.append(f"- Mức độ đông khách: {busy}.")
+        lines.append(t["ctx_busy"].format(busy=busy))
 
     if not lines:
         return ""
-    return "Thông tin thêm về quán:\n" + "\n".join(lines)
+    return t["ctx_header"] + "\n" + "\n".join(lines)

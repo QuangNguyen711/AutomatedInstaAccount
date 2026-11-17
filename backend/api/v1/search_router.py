@@ -5,10 +5,11 @@ from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from backend.api.dependencies import get_geocoding_provider, get_search_service
+from backend.api.i18n import request_lang, strings
 from backend.application.services.place_context import busy_line, hours_line
 from backend.application.services.search_service import SearchService
 from backend.config import get_settings
-from backend.domain.entities.search_query import SearchQuery
+from backend.domain.entities.search_query import SearchQuery, normalize_lang
 from backend.domain.ports.geocoding_provider import GeocodingProvider
 
 router = APIRouter(prefix="/api")
@@ -50,14 +51,20 @@ async def search(
     search_service: SearchService = Depends(get_search_service),
 ):
     settings = get_settings()
+    lang = request_lang(request)
     query = SearchQuery(
         lat=lat,
         lng=lng,
         radius_m=radius_m or settings.default_search_radius_m,
         query_text=query_text,
+        lang=lang,
     )
     results = await search_service.search(query)
-    return templates.TemplateResponse(request, "partials/results.html", {"results": results})
+    return templates.TemplateResponse(
+        request,
+        "partials/results.html",
+        {"results": results, "lang": lang, "t": strings(lang)},
+    )
 
 
 @router.get("/search/stream")
@@ -66,16 +73,19 @@ async def search_stream(
     lng: float,
     query_text: str = "",
     radius_m: int | None = None,
+    lang: str = "vi",
     search_service: SearchService = Depends(get_search_service),
 ):
     # Streams one SSE "place" event per result as it finishes, then a "done" event carrying the
     # final count. EventSource is GET-only, hence query params (no sensitive data here).
     settings = get_settings()
+    lang = normalize_lang(lang)
     query = SearchQuery(
         lat=lat,
         lng=lng,
         radius_m=radius_m or settings.default_search_radius_m,
         query_text=query_text,
+        lang=lang,
     )
     slide_template = templates.get_template("partials/place_slide.html")
 
@@ -84,7 +94,7 @@ async def search_stream(
         try:
             async for ranked in search_service.search_stream(query):
                 count += 1
-                yield _sse("place", slide_template.render(r=ranked))
+                yield _sse("place", slide_template.render(r=ranked, lang=lang, t=strings(lang)))
             yield _sse("done", str(count))
         except Exception:
             yield _sse("error", "search failed")

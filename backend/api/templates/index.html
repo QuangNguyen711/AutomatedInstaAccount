@@ -7,25 +7,33 @@
     <div class="grain" aria-hidden="true"></div>
 
     <div class="relative z-10">
+        <!-- Language toggle: reloads the page with ?lang=, which also sets the lang cookie. -->
+        <nav class="absolute top-4 right-4 flex rounded-full p-0.5 font-public-sans text-[11px] font-bold"
+             style="background-color:var(--surface); border:1px solid var(--line);" aria-label="Language">
+            {% for code, label in [("vi", "VI"), ("en", "EN")] %}
+            <a href="/?lang={{ code }}" class="px-3 py-1 rounded-full transition-colors"
+               {% if code == lang %}aria-current="true" style="background-color:var(--accent); color:var(--ground);"
+               {% else %}style="color:var(--ink-dim);"{% endif %}>{{ label }}</a>
+            {% endfor %}
+        </nav>
+
         <div class="max-w-md mx-auto px-6 pt-20 pb-6">
             <div class="text-center">
                 <p class="eyebrow rise rise-1 font-public-sans text-[11px] font-semibold uppercase mb-3"
-                   style="color:var(--tan); opacity:0.7;">Ăn gì · Ở đâu · Gần bạn</p>
+                   style="color:var(--tan); opacity:0.7;">{{ t.eyebrow }}</p>
                 <h1 class="wordmark font-bungee leading-[0.9] mb-4 rise rise-2"
                     style="font-size:clamp(2.5rem, 15vw, 4.25rem);">
                     <span class="block">Places</span>
                     <span class="block dot">Finder</span>
                 </h1>
                 <p class="rise rise-3 font-public-sans text-sm mb-8" style="color:var(--ink-dim);">
-                    Tả kiểu quán bạn thèm — tụi mình lục Google Maps, đọc review thật rồi xếp hạng cho.
+                    {{ t.tagline }}
                 </p>
             </div>
 
             <template x-if="denied">
                 <p class="font-public-sans text-xs mb-4 text-center" style="color:#e0a56e;">
-                    Trình duyệt không lấy được vị trí tự động (thường do đang truy cập qua HTTP, không
-                    phải HTTPS) — nhập địa chỉ, mã Plus Code (vd. 3W23+962 Việt Hưng, Hà Nội), hoặc
-                    toạ độ copy từ Google Maps vào ô bên dưới.
+                    {{ t.geo_denied }}
                 </p>
             </template>
             <template x-if="error">
@@ -34,23 +42,23 @@
 
             <form x-ref="form" @submit.prevent="onSubmit()" class="panel p-4 space-y-3 text-left rise rise-4">
                 <label class="block">
-                    <span class="font-public-sans text-[11px] font-semibold uppercase tracking-wider" style="color:var(--ink-dim);">Thèm gì</span>
+                    <span class="font-public-sans text-[11px] font-semibold uppercase tracking-wider" style="color:var(--ink-dim);">{{ t.label_query }}</span>
                     <input x-ref="query" type="text" name="query_text"
-                        placeholder="vd. quán cafe yên tĩnh có trà sữa trân châu"
+                        placeholder="{{ t.placeholder_query }}"
                         class="search-field w-full mt-1.5 rounded-xl px-4 py-3 font-public-sans text-sm border-0"
                         style="background-color:var(--well); color:var(--ink);">
                 </label>
 
                 <div class="grid grid-cols-5 gap-3">
                     <label class="col-span-3 block">
-                        <span class="font-public-sans text-[11px] font-semibold uppercase tracking-wider" style="color:var(--ink-dim);">Vị trí</span>
+                        <span class="font-public-sans text-[11px] font-semibold uppercase tracking-wider" style="color:var(--ink-dim);">{{ t.label_location }}</span>
                         <input type="text" x-model="address"
-                            placeholder="Địa chỉ / Plus Code / toạ độ"
+                            placeholder="{{ t.placeholder_location }}"
                             class="search-field w-full mt-1.5 rounded-xl px-4 py-3 font-public-sans text-sm border-0"
                             style="background-color:var(--well); color:var(--ink);">
                     </label>
                     <label class="col-span-2 block">
-                        <span class="font-public-sans text-[11px] font-semibold uppercase tracking-wider" style="color:var(--ink-dim);">Bán kính</span>
+                        <span class="font-public-sans text-[11px] font-semibold uppercase tracking-wider" style="color:var(--ink-dim);">{{ t.label_radius }}</span>
                         <select x-ref="radius" name="radius_m"
                             class="search-field w-full mt-1.5 rounded-xl px-3 py-3 font-public-sans text-sm border-0"
                             style="background-color:var(--well); color:var(--ink);">
@@ -63,17 +71,17 @@
 
                 <button type="submit" :disabled="locating || searching"
                     class="btn-primary w-full rounded-xl py-3.5 mt-1 font-bungee text-sm tracking-wide disabled:opacity-40">
-                    <span x-show="locating">ĐANG LẤY VỊ TRÍ...</span>
-                    <span x-show="!locating && searching">ĐANG TÌM...</span>
-                    <span x-show="!locating && !searching">TÌM QUÁN</span>
+                    <span x-show="locating">{{ t.btn_locating }}</span>
+                    <span x-show="!locating && searching">{{ t.btn_searching }}</span>
+                    <span x-show="!locating && !searching">{{ t.btn_search }}</span>
                 </button>
             </form>
 
             <!-- Live streaming status: pulsing dot + running count as cards arrive. -->
             <div x-show="searching" x-cloak class="flex items-center justify-center gap-2 mt-4 font-public-sans text-sm" style="color:var(--ink-dim);">
                 <span class="pulse-dot inline-block w-2 h-2 rounded-full" style="background-color:var(--accent);"></span>
-                <span x-show="count === 0">Đang tìm quán (có thể mất một lúc)...</span>
-                <span x-show="count > 0" x-text="'Đã thấy ' + count + ' quán, đang tìm thêm...'"></span>
+                <span x-show="count === 0">{{ t.status_searching }}</span>
+                <span x-show="count > 0" x-text="T.status_found.replace('{count}', count)"></span>
             </div>
         </div>
 
@@ -82,6 +90,9 @@
 </main>
 
 <script>
+// UI strings for the current language (see backend/api/i18n.py), for messages set from JS.
+const LANG = {{ lang | tojson }};
+const T = {{ t | tojson }};
 document.addEventListener('alpine:init', () => {
     Alpine.data('placesFinder', () => ({
         lat: null, lng: null, address: '', locating: true, denied: false,
@@ -103,7 +114,7 @@ document.addEventListener('alpine:init', () => {
             this.error = null;
             if (this.lat === null || this.lng === null) {
                 const addr = this.address.trim();
-                if (!addr) { this.error = 'Cần vị trí hoặc nhập địa chỉ để tìm.'; return; }
+                if (!addr) { this.error = T.err_need_location; return; }
                 // Coordinates pasted straight from Google Maps (e.g. "21.028511, 105.804817").
                 const coordMatch = addr.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
                 if (coordMatch) {
@@ -112,10 +123,10 @@ document.addEventListener('alpine:init', () => {
                 } else {
                     try {
                         const res = await fetch('/api/geocode?address=' + encodeURIComponent(addr));
-                        if (!res.ok) { this.error = 'Không tìm thấy địa chỉ này.'; return; }
+                        if (!res.ok) { this.error = T.err_address_not_found; return; }
                         const data = await res.json();
                         this.lat = data.lat; this.lng = data.lng;
-                    } catch (e) { this.error = 'Không tra được địa chỉ, thử lại sau.'; return; }
+                    } catch (e) { this.error = T.err_geocode_failed; return; }
                 }
             }
             this.startStream();
@@ -134,6 +145,7 @@ document.addEventListener('alpine:init', () => {
                 lat: this.lat, lng: this.lng,
                 query_text: this.$refs.query.value || '',
                 radius_m: this.$refs.radius.value || '',
+                lang: LANG,
             });
             const es = new EventSource('/api/search/stream?' + q.toString());
             this.es = es;
@@ -146,11 +158,12 @@ document.addEventListener('alpine:init', () => {
             es.addEventListener('done', () => {
                 this.finish();
                 if (this.count === 0) {
-                    results.innerHTML = '<p class="font-public-sans text-sm text-center" style="color:#a8927e;">Không tìm thấy quán nào phù hợp.</p>';
+                    results.innerHTML = '<p class="font-public-sans text-sm text-center" style="color:#a8927e;"></p>';
+                    results.firstElementChild.textContent = T.no_results;
                 }
             });
-            es.addEventListener('error', () => { this.finish(); if (this.count === 0) this.error = 'Tìm kiếm thất bại, thử lại.'; });
-            es.onerror = () => { if (this.searching) { this.finish(); if (this.count === 0) this.error = 'Mất kết nối tới máy chủ, thử lại.'; } };
+            es.addEventListener('error', () => { this.finish(); if (this.count === 0) this.error = T.err_search_failed; });
+            es.onerror = () => { if (this.searching) { this.finish(); if (this.count === 0) this.error = T.err_connection_lost; } };
         },
 
         finish() { this.searching = false; if (this.es) { this.es.close(); this.es = null; } },

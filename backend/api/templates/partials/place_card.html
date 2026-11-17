@@ -33,12 +33,12 @@
             <!-- Address keeps the pin icon (the one genuinely meaningful, non-repeated glyph). -->
             <div class="flex items-start gap-2 mb-2.5">
                 <img src="/static/icons/13.svg" class="w-3.5 h-3.5 mt-0.5 shrink-0 opacity-70" alt="">
-                <p class="font-public-sans text-xs leading-relaxed" style="color:var(--ink-dim);">{{ r.place.address or "Chưa rõ địa chỉ" }}</p>
+                <p class="font-public-sans text-xs leading-relaxed" style="color:var(--ink-dim);">{{ r.place.address or t.no_address }}</p>
             </div>
 
             {# Clock icon now belongs to the hours line alone (distance + busyness dropped their
                icons), so it no longer reads as repetition. "Đang mở/Đã đóng" carries the status. #}
-            {% set hours = hours_line(r.place) %}
+            {% set hours = hours_line(r.place, lang) %}
             {% if hours %}
             <div class="flex items-center gap-2 mb-1">
                 <img src="/static/icons/12.svg" class="w-3.5 h-3.5 shrink-0 opacity-70" alt="">
@@ -47,16 +47,16 @@
             {% endif %}
 
             {# Busyness: plain text, indented to line up under the hours text above (no icon). #}
-            {% set busy = busy_line(r.place) %}
+            {% set busy = busy_line(r.place, lang) %}
             {% if busy %}
             <p class="font-public-sans text-[11px] mb-2.5 pl-4" style="color:var(--ink-dim); opacity:0.8;">{{ busy }}</p>
             {% endif %}
 
             <div class="flex items-center justify-between gap-2 pt-0.5">
-                <p class="font-public-sans text-xs font-semibold" style="color:var(--tan);">Cách {{ (r.distance_m / 1000) | round(1) }} km</p>
+                <p class="font-public-sans text-xs font-semibold" style="color:var(--tan);">{{ t.distance.format(km=(r.distance_m / 1000) | round(1)) }}</p>
                 <span class="shrink-0 text-[11px] font-public-sans font-bold px-3.5 py-1.5 rounded-full"
                       style="background-color:var(--accent); color:var(--ground);">
-                    Xem trên Maps →
+                    {{ t.view_on_maps }}
                 </span>
             </div>
         </div>
@@ -65,7 +65,7 @@
     {% if r.place.summary %}
     <!-- Summary as a torn paper slip — a printed note pinned under the card -->
     <div class="mt-2.5 rounded-xl p-3.5 shadow-sm" style="background-color:#F3ECE4;">
-        <p class="font-public-sans text-[10px] font-bold uppercase tracking-wider mb-1" style="color:var(--accent-deep);">Vì sao hợp</p>
+        <p class="font-public-sans text-[10px] font-bold uppercase tracking-wider mb-1" style="color:var(--accent-deep);">{{ t.why_match }}</p>
         <p class="font-public-sans text-xs leading-relaxed" style="color:#5c4a3a;">{{ r.place.summary }}</p>
     </div>
     {% endif %}

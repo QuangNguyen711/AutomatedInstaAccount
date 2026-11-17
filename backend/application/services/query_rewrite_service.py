@@ -27,7 +27,12 @@ class QueryRewriteService:
             "liệu cụ thể, không gian, giá cả, dịch vụ...), vì Google Maps chỉ tìm được theo loại "
             "hình quán chứ không tìm theo yêu cầu chi tiết.\n"
             'Ví dụ: "quán bánh bắt buộc phải có bánh socola đậm" -> quán bánh ngọt\n'
-            'Ví dụ: "cafe yên tĩnh có trà sữa trân châu" -> quán cafe trà sữa\n\n'
+            'Ví dụ: "cafe yên tĩnh có trà sữa trân châu" -> quán cafe trà sữa\n'
+            # English-mode users type in English, but the places are in Hanoi and named/tagged
+            # in Vietnamese on Maps — so the search term is always Vietnamese.
+            "Yêu cầu có thể viết bằng tiếng Anh — cụm từ tìm kiếm LUÔN trả về bằng tiếng Việt.\n"
+            'Ví dụ: "a quiet cafe with good matcha latte" -> quán cafe matcha\n'
+            'Ví dụ: "cheap pho place open late" -> quán phở\n\n'
             f'Yêu cầu gốc: "{query_text}"\n\n'
             "Chỉ trả về đúng cụm từ tìm kiếm, không thêm gì khác:"
         )
