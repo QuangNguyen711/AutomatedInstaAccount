@@ -1,0 +1,6 @@
+{# One carousel slide, streamed to the client one at a time via SSE. data-score lets the
+   client keep slides ordered by rank as they arrive out of order. #}
+<div class="place-slide w-full shrink-0 snap-center flex justify-center px-4 py-1"
+     data-score="{{ r.score }}">
+    {% include "partials/place_card.html" %}
+</div>

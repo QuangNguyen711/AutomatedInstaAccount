@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.infrastructure.database.session import Base
@@ -27,6 +27,9 @@ class PlaceModel(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # {weekday: raw hours string} and {hour24: busy percent} — see the Place entity for shape.
+    opening_hours: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    popular_times: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     photos: Mapped[list["PhotoModel"]] = relationship(
         back_populates="place", cascade="all, delete-orphan"

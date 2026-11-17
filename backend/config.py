@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     # (no reviews, no other photos, no summary), so a mismatch produces a mix of fully-enriched
     # and half-empty cards in the same result set. Each detail page costs ~20-40s (headed
     # browser, review + review-photo scraping).
-    max_crawl_results: int = 8
-    max_detail_pages: int = 8
+    max_crawl_results: int = 12
+    max_detail_pages: int = 12
 
     # Not currently used for ranking (see RankingService — relevance now comes from a
     # query-aware LLM match score instead of embedding similarity). Left configurable in case
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     llm_enabled: bool = False
     llm_api_url: str | None = None
     llm_api_key: str | None = None
-    llm_model_name: str = "nvidia/nemotron-3-nano-30b-a3b"
+    llm_model_name: str = "Qwen/Qwen3.5-35B-A3B-GPTQ-Int4"
     llm_reasoning_enabled: bool = False
 
     yolo_weights_path: str = "backend/infrastructure/vision/weights/best_cls.pt"

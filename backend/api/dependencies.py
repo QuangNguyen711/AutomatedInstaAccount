@@ -12,8 +12,8 @@ from backend.infrastructure.database.repositories.place_repository import (
     SqlAlchemyPlaceRepository,
 )
 from backend.infrastructure.database.session import SessionLocal
-from backend.infrastructure.geocoding.nominatim_geocoding_provider import (
-    NominatimGeocodingProvider,
+from backend.infrastructure.geocoding.photon_geocoding_provider import (
+    PhotonGeocodingProvider,
 )
 from backend.infrastructure.llm.noop_llm_provider import NoOpLLMProvider
 from backend.infrastructure.llm.nvidia_llm_provider import NvidiaLLMProvider
@@ -33,7 +33,7 @@ _places_provider = PlaywrightPlacesProvider(
 )
 _image_classifier = YoloClassifierProvider(weights_path=_settings.yolo_weights_path)
 _place_repository = SqlAlchemyPlaceRepository(SessionLocal)
-_geocoding_provider = NominatimGeocodingProvider()
+_geocoding_provider = PhotonGeocodingProvider()
 
 _llm_provider: LLMProvider
 if _settings.llm_enabled and _settings.llm_api_url and _settings.llm_api_key:
@@ -64,5 +64,5 @@ def get_search_service() -> SearchService:
     return _search_service
 
 
-def get_geocoding_provider() -> NominatimGeocodingProvider:
+def get_geocoding_provider() -> PhotonGeocodingProvider:
     return _geocoding_provider

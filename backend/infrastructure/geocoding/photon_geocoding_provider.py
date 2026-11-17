@@ -7,22 +7,24 @@ from openlocationcode import openlocationcode as olc
 
 from backend.domain.ports.geocoding_provider import GeocodingProvider
 
-_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
+_SEARCH_URL = "https://photon.komoot.io/api/"
 
 # Google "Plus Codes" (Open Location Code), e.g. "3W23+962 Việt Hưng, Hà Nội" — the format
 # Google Maps itself shows/copies for a pinned location. A SHORT code (no leading area digits,
 # the common case when copied off a nearby map view) needs a locality reference to resolve;
-# Nominatim doesn't understand this format at all, so it's decoded locally instead.
+# the geocoding API doesn't understand this format at all, so it's decoded locally instead.
 _PLUS_CODE_RE = re.compile(
     r"^([23456789CFGHJMPQRVWX]{2,8}\+[23456789CFGHJMPQRVWX]{2,7})(?:\s+(.+))?$", re.I
 )
 
 
-class NominatimGeocodingProvider(GeocodingProvider):
-    """Free geocoding via OpenStreetMap's Nominatim — no API key.
+class PhotonGeocodingProvider(GeocodingProvider):
+    """Free geocoding via Komoot's Photon (OpenStreetMap data) — no API key.
 
-    Usage policy (nominatim.org) requires a real User-Agent identifying the app and caps
-    public-instance usage at ~1 request/sec, both easily satisfied at this app's personal scale.
+    Replaces the earlier Nominatim provider: nominatim.openstreetmap.org turned out to be
+    blocked at the TLS layer on the deployment network (SSL handshake reset, consistent with
+    SNI-based filtering — failed from both the host and the container while other HTTPS hosts
+    worked fine). Photon serves the same OSM data from a different domain that isn't blocked.
     """
 
     def __init__(self, timeout_s: float = 10.0):
@@ -60,11 +62,11 @@ class NominatimGeocodingProvider(GeocodingProvider):
         return area.latitudeCenter, area.longitudeCenter
 
     async def _geocode_address(self, address: str) -> tuple[float, float] | None:
-        response = await self._client.get(
-            _SEARCH_URL, params={"q": address, "format": "json", "limit": 1}
-        )
+        response = await self._client.get(_SEARCH_URL, params={"q": address, "limit": 1})
         response.raise_for_status()
-        results = response.json()
-        if not results:
+        features = response.json().get("features", [])
+        if not features:
             return None
-        return float(results[0]["lat"]), float(results[0]["lon"])
+        # Photon returns GeoJSON: coordinates are [lng, lat], the reverse of Nominatim's lat/lon.
+        lng, lat = features[0]["geometry"]["coordinates"]
+        return float(lat), float(lng)

@@ -43,6 +43,11 @@ ENV DISPLAY=:99
 # but that handshake reliably hangs forever with zero output when it's the container's PID 1
 # (confirmed live: Xvfb starts fine, lock file appears, the wait just never returns). Starting
 # Xvfb directly and giving it a fixed head start sidesteps that fragile signal dance entirely.
-CMD Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp & \
+#
+# The while-loop supervises Xvfb: confirmed live that it can die mid-session (every search
+# launches/closes 2 Chromium instances against it — after enough cycles it went down, and every
+# search failed with "Missing X server" until the container was manually restarted). Restarting
+# it here, and clearing its lock file first, makes that self-healing instead of a hard outage.
+CMD while true; do rm -f /tmp/.X99-lock; Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp; sleep 1; done & \
     sleep 2 && \
     uvicorn backend.api.app:app --host 0.0.0.0 --port 8000

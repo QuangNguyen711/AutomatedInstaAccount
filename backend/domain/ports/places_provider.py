@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 
 from backend.domain.entities.place import Place
 from backend.domain.entities.search_query import SearchQuery
@@ -17,3 +18,8 @@ class PlacesProvider(ABC):
         """Scrape full detail (refined address, photos, reviews) for each place, mutating it
         in place. Call only for places that actually need a fresh detail scrape — this is the
         expensive part of a crawl."""
+
+    @abstractmethod
+    def fetch_details_stream(self, places: list[Place]) -> AsyncIterator[Place]:
+        """Like fetch_details, but yields each place as its own detail scrape completes so
+        callers can stream results. Yields exactly one item per input place."""

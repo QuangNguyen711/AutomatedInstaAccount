@@ -11,12 +11,96 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&family=Bungee&display=swap" rel="stylesheet">
     <style>
+        /* --- Design tokens: "warm printed food-poster". Single, deliberately committed dark
+           espresso world — grounded in the Bungee-signage + Instagram-post heritage. --- */
+        :root {
+            --ground:   #2A1B0F;   /* deep espresso page ground */
+            --surface:  #3A2817;   /* raised menu-card panel     */
+            --well:     #241710;   /* inset fields               */
+            --ink:      #EFE0CF;   /* warm cream text            */
+            --ink-dim:  #B79E88;   /* secondary text             */
+            --tan:      #C6B5AB;   /* heritage tan (lines/labels)*/
+            --accent:   #E8A54B;   /* turmeric amber — the one pop */
+            --accent-deep: #C77E2A;
+            --line:     rgba(198,181,171,0.14);
+        }
+        [x-cloak] { display: none !important; }
+        body { background: var(--ground); }
         .htmx-indicator{display:none} .htmx-request .htmx-indicator{display:block} .htmx-request.htmx-indicator{display:block}
         .font-bungee { font-family: "Bungee", sans-serif; }
         .font-public-sans { font-family: "Public Sans", sans-serif; }
-        .search-field { outline: 2px solid transparent; transition: outline-color 0.15s; }
-        .search-field:focus { outline-color: #C6B5AB; }
+
+        .search-field {
+            outline: 2px solid transparent;
+            transition: outline-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+        }
+        .search-field:focus { outline-color: var(--accent); box-shadow: 0 0 0 4px rgba(232,165,75,0.14); }
         .search-field::placeholder { color: #8a7563; }
+
+        /* Hide the horizontal scrollbar on the carousel while keeping it swipeable. */
+        .carousel { scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
+        .carousel::-webkit-scrollbar { display: none; }
+
+        /* Each result card animates in as it streams from the server. */
+        @keyframes card-in {
+            from { opacity: 0; transform: translateY(16px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .place-slide { animation: card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+        /* Shimmer for skeleton placeholders shown while the first results are still crawling. */
+        @keyframes shimmer { 100% { background-position: -200% 0; } }
+        .skeleton {
+            background: linear-gradient(90deg, #3d2c1a 25%, #4a3826 37%, #3d2c1a 63%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s ease-in-out infinite;
+        }
+
+        /* Pulsing dot for the live "searching" status (functional state, not decoration). */
+        @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+        .pulse-dot { animation: pulse-dot 1s ease-in-out infinite; }
+
+        /* ---- Poster ground: a single warm spotlight behind the wordmark + paper grain.
+           Deliberately NOT drifting gradient blobs / frosted glass (the AI-generic cluster);
+           the texture is printed-matte, and stillness makes the type do the work. ---- */
+        .poster-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background:
+                radial-gradient(90% 55% at 50% 16%, rgba(232,165,75,0.16), transparent 60%),
+                radial-gradient(120% 90% at 50% 40%, transparent 42%, rgba(15,10,5,0.6) 100%);
+        }
+        .grain { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.055;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+        /* ---- Wordmark: a confident static sign, not a shimmering gradient. ---- */
+        .wordmark { color: var(--ink); letter-spacing: -0.01em;
+            text-shadow: 0 1px 0 rgba(0,0,0,0.35), 0 10px 30px rgba(0,0,0,0.35); }
+        .wordmark .dot { color: var(--accent); }
+        .eyebrow { letter-spacing: 0.28em; }
+
+        /* ---- Tactile surface panel for the search form (solid, not frosted glass). ---- */
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 1rem;
+            box-shadow: 0 1px 0 rgba(255,240,220,0.05) inset, 0 22px 48px -26px rgba(0,0,0,0.7);
+        }
+
+        /* Primary action carries the one bold accent. */
+        .btn-primary { background: var(--accent); color: var(--ground);
+            transition: background 0.15s, transform 0.08s, box-shadow 0.15s;
+            box-shadow: 0 8px 20px -8px rgba(232,165,75,0.5); }
+        .btn-primary:hover:not(:disabled) { background: var(--accent-deep); }
+        .btn-primary:active:not(:disabled) { transform: translateY(1px); }
+
+        /* Staggered rise-in — one clean page-load sequence. */
+        @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+        .rise { animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .rise-1 { animation-delay: 0.04s; } .rise-2 { animation-delay: 0.14s; }
+        .rise-3 { animation-delay: 0.26s; } .rise-4 { animation-delay: 0.40s; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .place-slide, .rise, .pulse-dot { animation: none !important; }
+        }
     </style>
 </head>
 <body class="min-h-screen">

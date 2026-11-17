@@ -11,8 +11,9 @@ from backend.domain.geo import haversine_distance_m
 
 # Caps concurrent LLM calls — one per place, run at every search (not just cache-miss) since
 # the match score/summary depend on the query text and can't be precomputed at ingest time.
-# Kept modest: the NVIDIA endpoint returned 503s under higher concurrency in testing.
-_MAX_CONCURRENT_LLM_CALLS = 3
+# The self-hosted Qwen vLLM proxy handles more in-flight requests than the old NVIDIA endpoint
+# did (which 503'd past ~3), so this is raised to keep pace with the larger result count.
+_MAX_CONCURRENT_LLM_CALLS = 5
 
 
 class RankingService:
@@ -31,7 +32,9 @@ class RankingService:
         }
         max_distance = max(distances.values()) or 1.0
 
-        match_scores = await asyncio.gather(*(self._match(p, query) for p in places))
+        match_scores = await asyncio.gather(
+            *(self._match(p, query, distances[p.place_id]) for p in places)
+        )
 
         ranked = []
         for place, llm_score in zip(places, match_scores):
@@ -48,13 +51,30 @@ class RankingService:
         ranked.sort(key=lambda rp: rp.score, reverse=True)
         return ranked
 
-    async def _match(self, place: Place, query: SearchQuery) -> float:
+    async def score_place(
+        self, place: Place, query: SearchQuery, distance_m: float, max_distance: float
+    ) -> RankedPlace:
+        """Score a single place — the per-place unit of rank(), used by the streaming path so
+        each result can be finished and pushed to the UI independently. distance normalization
+        (max_distance) is computed once by the caller from the listing coords."""
+        llm_score = await self._match(place, query, distance_m)
+        distance_score = 1 - (distance_m / (max_distance or 1.0))
+        relevance_score = llm_score / 10.0
+        score = (
+            self._settings.ranking_weight_relevance * relevance_score
+            + self._settings.ranking_weight_distance * distance_score
+        )
+        return RankedPlace(place=place, score=score, distance_m=distance_m)
+
+    async def _match(
+        self, place: Place, query: SearchQuery, distance_m: float | None = None
+    ) -> float:
         if not self._settings.llm_enabled:
             return 0.0
         try:
             async with self._semaphore:
                 summary, score = await self._summary_service.generate_query_match(
-                    place, query.query_text
+                    place, query.query_text, distance_m
                 )
         except Exception:
             # One place's LLM call failing (rate limit, timeout, transient 503) shouldn't

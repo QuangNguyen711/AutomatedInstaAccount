@@ -56,6 +56,8 @@ class SqlAlchemyPlaceRepository(PlaceRepository):
                 existing.review_count = place.review_count
                 existing.category = place.category
                 existing.summary = place.summary
+                existing.opening_hours = place.opening_hours
+                existing.popular_times = place.popular_times
                 existing.fetched_at = datetime.now(timezone.utc)
 
                 existing.photos = [
@@ -94,6 +96,8 @@ class SqlAlchemyPlaceRepository(PlaceRepository):
             review_count=row.review_count,
             category=row.category,
             summary=row.summary,
+            opening_hours=row.opening_hours,
+            popular_times=row.popular_times,
             photos=[Photo(url=p.url, is_good=p.is_good) for p in row.photos],
             reviews=[
                 Review(

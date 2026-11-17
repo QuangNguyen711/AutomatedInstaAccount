@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 
+from backend.application.services.place_context import prompt_context
 from backend.domain.entities.place import Place, Review
 from backend.domain.ports.llm_provider import LLMProvider
 
@@ -37,7 +38,7 @@ class SummaryService:
         self._llm_provider = llm_provider
 
     async def generate_query_match(
-        self, place: Place, query_text: str
+        self, place: Place, query_text: str, distance_m: float | None = None
     ) -> tuple[str | None, float]:
         if not place.reviews:
             return None, 0.0
@@ -49,11 +50,17 @@ class SummaryService:
         )[:_MAX_REVIEWS_IN_PROMPT]
         reviews_block = "\n".join(_format_review(r) for r in reviews_sorted)
 
+        # Distance / open-now / busyness — lets the model honour requests like "quán gần",
+        # "giờ này còn mở không", "tránh giờ đông". Empty when none of it is known.
+        context_block = prompt_context(place, distance_m)
+        context_section = f"{context_block}\n\n" if context_block else ""
+
         prompt = (
             f'Đánh giá mức độ phù hợp của quán "{place.name}" với yêu cầu của khách, '
             "dựa trên review thật của quán bên dưới (mới nhất trước — ưu tiên review gần đây "
             "hơn review cũ khi đánh giá).\n\n"
             f'Yêu cầu của khách: "{query_text or "không có yêu cầu cụ thể, chỉ tìm quán gần đây"}"\n\n'
+            f"{context_section}"
             f"Review:\n{reviews_block}\n\n"
             "Trả lời ĐÚNG theo 2 dòng sau, không thêm gì khác:\n"
             "SCORE: <một số từ 0 đến 10, 10 = rất phù hợp yêu cầu, 0 = không liên quan/không đủ "
